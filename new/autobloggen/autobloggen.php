@@ -1,36 +1,51 @@
 <?php
 /**
- * Plugin Name: My First Plugin
- * Description: Generate a blog post using Gemini API after verifying your key.
+ * Plugin Name: AutoBlogGen
+ * Description: Generate AI-powered blog posts automatically using the Gemini API after verifying your API key.
  * Version: 1.1
  * Author: Sailaja Suprava Mohanty
+ * License: GPLv2 or later
  */
 
-session_start(); // To temporarily store user's API key
+if (session_status() === PHP_SESSION_NONE) {
+    session_start(); // To temporarily store user's API key
+}
 
 // ======== SHORTCODE ======== //
 function ai_blog_generator_shortcode() {
     // STEP 1: Ask for API Key
-    if (!isset($_SESSION['gemini_api_key'])) {
-        if (isset($_POST['verify_api_key'])) {
-            $key = sanitize_text_field($_POST['gemini_key']);
+    if (empty($_SESSION['gemini_api_key'])) {
+        // Verify API Key form submitted + nonce verification
+        if ( isset($_POST['verify_api_key']) && isset($_POST['_wpnonce']) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'verify_api_key_nonce' ) ) {
 
-            // ✅ Check if the key is valid by calling Gemini briefly
-            $test_response = wp_remote_post(
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' . $key,
-                [
-                    'headers' => ['Content-Type' => 'application/json'],
-                    'body'    => json_encode(['contents' => [[ 'parts' => [['text' => 'test']]]]]),
-                    'timeout' => 10
-                ]
-            );
+            $key = '';
+            if ( isset( $_POST['gemini_key'] ) ) {
+                // unslash then sanitize
+                $key = sanitize_text_field( wp_unslash( $_POST['gemini_key'] ) );
+            }
 
-            if (!is_wp_error($test_response) && wp_remote_retrieve_response_code($test_response) === 200) {
-                $_SESSION['gemini_api_key'] = $key;
-                echo "<meta http-equiv='refresh' content='0'>";
-                return;
+            if ( ! empty( $key ) ) {
+                // Quick test call to validate key
+                $test_response = wp_remote_post(
+                    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' . rawurlencode( $key ),
+                    [
+                        'headers' => [ 'Content-Type' => 'application/json' ],
+                        'body'    => wp_json_encode( [ 'contents' => [ [ 'parts' => [ [ 'text' => 'test' ] ] ] ] ] ),
+                        'timeout' => 10,
+                    ]
+                );
+
+                if ( ! is_wp_error( $test_response ) && wp_remote_retrieve_response_code( $test_response ) === 200 ) {
+                    $_SESSION['gemini_api_key'] = $key;
+                    // refresh to show next step
+                    echo "<meta http-equiv='refresh' content='0'>";
+                    return;
+                } else {
+                    // show api form with error message
+                    return '<p style="color:red;">Invalid API key. Please try again.</p>' . ai_api_key_form();
+                }
             } else {
-                return '<p style="color:red;">Invalid API key. Please try again.</p>' . ai_api_key_form();
+                return '<p style="color:red;">Please enter an API key.</p>' . ai_api_key_form();
             }
         }
 
@@ -43,8 +58,10 @@ function ai_blog_generator_shortcode() {
 }
 add_shortcode('ai_blog', 'ai_blog_generator_shortcode');
 
+
 // ======== API KEY INPUT FORM ======== //
 function ai_api_key_form() {
+    // Keep UI exactly as original; add nonce field for verification
     return '
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
@@ -158,6 +175,7 @@ function ai_api_key_form() {
             <p class="ai-key-subtitle">Securely connect your Gemini API to unlock AI-powered blog generation</p>
             <form method="post">
                 <input type="password" name="gemini_key" class="ai-key-input" placeholder="Paste your API key here..." required />
+                ' . wp_nonce_field( 'verify_api_key_nonce', '_wpnonce', true, false ) . '
                 <button type="submit" name="verify_api_key" class="ai-key-button">
                     Verify & Continue →
                 </button>
@@ -397,73 +415,111 @@ function ai_blog_form() {
         </div>
         
         <div class="ai-blog-card">';
-    
- if (isset($_POST["ai_prompt"])) {
-    $prompt = sanitize_text_field($_POST["ai_prompt"]);
-    $api_key = $_SESSION["gemini_api_key"];
 
-    $response = wp_remote_post(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" . $api_key,
-        [
-            "headers" => ["Content-Type" => "application/json"],
-            "body"    => json_encode([
-                "contents" => [[
-                    "parts" => [["text" => "Write a detailed blog post about: $prompt. Include headings, intro, and conclusion. Use Markdown syntax for formatting."]]
-                ]],
-            ]),
-            "timeout" => 25,
-        ]
-    );
+    // Process blog generation only when form submitted and nonce valid
+    if ( isset( $_POST['ai_prompt'] ) && isset( $_POST['_wpnonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'generate_blog_nonce' ) ) {
 
-    if (is_wp_error($response)) {
-        $output .= "<p style='color:#e60000; font-weight:500;'>⚠️ Error: " . esc_html($response->get_error_message()) . "</p>";
-    } else {
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-        $text = $data["candidates"][0]["content"]["parts"][0]["text"] ?? "No response received.";
+        $prompt = sanitize_text_field( wp_unslash( $_POST['ai_prompt'] ) );
+        $api_key = isset( $_SESSION['gemini_api_key'] ) ? sanitize_text_field( $_SESSION['gemini_api_key'] ) : '';
 
-        // --- 🪄 Markdown Formatting Conversion --- //
-        $formatted = $text;
+        if ( ! empty( $api_key ) && ! empty( $prompt ) ) {
 
-        // Headings
-        $formatted = preg_replace('/^### (.*?)$/m', '<h3>$1</h3>', $formatted);
-        $formatted = preg_replace('/^## (.*?)$/m', '<h2>$1</h2>', $formatted);
-        $formatted = preg_replace('/^# (.*?)$/m', '<h1>$1</h1>', $formatted);
+            $response = wp_remote_post(
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' . rawurlencode( $api_key ),
+                [
+                    'headers' => [ 'Content-Type' => 'application/json' ],
+                    'body'    => wp_json_encode( [
+                        'contents' => [[
+                            'parts' => [[ 'text' => "Write a detailed blog post about: $prompt. Include headings, intro, and conclusion. Use Markdown syntax for formatting." ]]
+                        ]],
+                    ] ),
+                    'timeout' => 25,
+                ]
+            );
 
-        // Bold and Italic
-        $formatted = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $formatted);
-        $formatted = preg_replace('/\*(.*?)\*/', '<em>$1</em>', $formatted);
+            if ( is_wp_error( $response ) ) {
+                $output .= "<p style='color:#e60000; font-weight:500;'>⚠️ Error: " . esc_html( $response->get_error_message() ) . "</p>";
+            } else {
+                $body = wp_remote_retrieve_body( $response );
+                $data = json_decode( $body, true );
 
-        // Lists
-        $formatted = preg_replace('/\n\* (.*?)(?=\n|$)/', '<li>$1</li>', $formatted);
-        $formatted = preg_replace('/(<li>.*<\/li>)/s', '<ul>$1</ul>', $formatted);
+                // Safely get the generated text, avoid undefined index warnings
+                $text = '';
+                if ( isset( $data['candidates'][0]['content']['parts'][0]['text'] ) ) {
+                    $text = $data['candidates'][0]['content']['parts'][0]['text'];
+                } elseif ( isset( $data['output'][0]['content'][0]['text'] ) ) {
+                    // fallback if response shape differs
+                    $text = $data['output'][0]['content'][0]['text'];
+                } else {
+                    $text = '';
+                }
 
-        // Paragraphs
-        $formatted = preg_replace('/\n{2,}/', "</p><p>", $formatted);
-        $formatted = '<p>' . $formatted . '</p>';
+                if ( empty( $text ) ) {
+                    $text = 'No response received.';
+                }
 
-        // Line breaks
-        $formatted = nl2br($formatted);
+                // --- Convert Markdown-like text into safe HTML ---
+                // Work on the raw $text (from API) and then allow only safe tags in final output
+                $formatted = $text;
 
-        // --- ✅ Display the output inside styled container --- //
-        $output .= "
-        <div class='ai-blog-result'>
-            <h3 class='ai-blog-result-header'>
-                Your Generated Blog Post
-            </h3>
-            <div class='ai-blog-result-content'>
-                $formatted
-            </div>
-        </div>";
+                 // Headings
+                $formatted = preg_replace('/^### (.*?)$/m', '<h3>$1</h3>', $formatted);
+                $formatted = preg_replace('/^## (.*?)$/m', '<h2>$1</h2>', $formatted);
+                $formatted = preg_replace('/^# (.*?)$/m', '<h1>$1</h1>', $formatted);
+
+                // Bold and Italic
+                $formatted = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $formatted);
+                $formatted = preg_replace('/\*(.*?)\*/', '<em>$1</em>', $formatted);
+
+                // Lists
+                $formatted = preg_replace('/\n\* (.*?)(?=\n|$)/', '<li>$1</li>', $formatted);
+                $formatted = preg_replace('/(<li>.*<\/li>)/s', '<ul>$1</ul>', $formatted);
+
+                // Paragraphs
+                $formatted = preg_replace('/\n{2,}/', "</p><p>", $formatted);
+                $formatted = '<p>' . $formatted . '</p>';
+                // Convert single newlines to <br />
+                $formatted = nl2br( $formatted );
+
+                // Allowed HTML tags for final output
+                $allowed_tags = array(
+                    'h1' => array(),
+                    'h2' => array(),
+                    'h3' => array(),
+                    'p'  => array(),
+                    'br' => array(),
+                    'strong' => array(),
+                    'em' => array(),
+                    'ul' => array(),
+                    'li' => array(),
+                    'blockquote' => array(),
+                );
+
+                // Strip tags not in allowed list and output safely
+                $safe_html = wp_kses( $formatted, $allowed_tags );
+
+                // --- Display the output inside styled container --- //
+                $output .= "
+                <div class='ai-blog-result'>
+                    <h3 class='ai-blog-result-header'>
+                        Your Generated Blog Post
+                    </h3>
+                    <div class='ai-blog-result-content'>
+                        $safe_html
+                    </div>
+                </div>";
+            }
+        } else {
+            $output .= "<p style='color:#e60000;'>Please provide a prompt and make sure your API key is set.</p>";
+        }
     }
-}
 
-    
-    // Blog input form
-     $output .= '
+    // Blog input form (kept UI exactly; added nonce field)
+    $output .= '
             <form method="post">
                 <div class="ai-blog-form-wrapper">
                     <input type="text" name="ai_prompt" class="ai-blog-input" placeholder="Enter your blog topic (e.g., Benefits of AI in Healthcare)..." required />
+                    ' . wp_nonce_field( 'generate_blog_nonce', '_wpnonce', true, false ) . '
                     <button type="submit" class="ai-blog-button">
                          Generate Blog
                     </button>
@@ -472,14 +528,18 @@ function ai_blog_form() {
         </div>
 
         <form method="post" class="ai-blog-center">
+            ' . wp_nonce_field( 'logout_nonce', '_wpnonce', true, false ) . '
             <button type="submit" name="logout_key" class="ai-blog-logout">
                 Change API Key
             </button>
         </form>
     </div>';
 
-    if (isset($_POST['logout_key'])) {
-        unset($_SESSION['gemini_api_key']);
+    // Handle logout (change API key) with nonce
+    if ( isset( $_POST['logout_key'] ) && isset( $_POST['_wpnonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'logout_nonce' ) ) {
+        if ( isset( $_SESSION['gemini_api_key'] ) ) {
+            unset( $_SESSION['gemini_api_key'] );
+        }
         echo "<meta http-equiv='refresh' content='0'>";
     }
 

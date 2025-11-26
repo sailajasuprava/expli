@@ -37,6 +37,7 @@ function ai_blog_generator_shortcode() {
 
                 if ( ! is_wp_error( $test_response ) && wp_remote_retrieve_response_code( $test_response ) === 200 ) {
                     $_SESSION['gemini_api_key'] = $key;
+                    myplugin_send_event('api_key_verified', ['status' => 'success']);
                     // refresh to show next step
                     echo "<meta http-equiv='refresh' content='0'>";
                     return;
@@ -228,7 +229,7 @@ function ai_blog_form() {
             margin-bottom: 25px;
         }
 
-    /* Enhanced inline form */
+         /* Enhanced inline form */
         .ai-blog-form-wrapper {
             display: flex;
             gap: 12px;
@@ -433,7 +434,7 @@ function ai_blog_form() {
                             'parts' => [[ 'text' => "Write a detailed blog post about: $prompt. Include headings, intro, and conclusion. Use Markdown syntax for formatting." ]]
                         ]],
                     ] ),
-                    'timeout' => 25,
+                    'timeout' => 50,
                 ]
             );
 
@@ -462,26 +463,21 @@ function ai_blog_form() {
                 // Work on the raw $text (from API) and then allow only safe tags in final output
                 $formatted = $text;
 
-                // Headings
-                $formatted = preg_replace('/^###\s+(.*?)$/m', '<h3>$1</h3>', $formatted);
-                $formatted = preg_replace('/^##\s+(.*?)$/m', '<h2>$1</h2>', $formatted);
-                $formatted = preg_replace('/^#\s+(.*?)$/m', '<h1>$1</h1>', $formatted);
+                 // Headings
+                $formatted = preg_replace('/^### (.*?)$/m', '<h3>$1</h3>', $formatted);
+                $formatted = preg_replace('/^## (.*?)$/m', '<h2>$1</h2>', $formatted);
+                $formatted = preg_replace('/^# (.*?)$/m', '<h1>$1</h1>', $formatted);
 
-                // Bold and Italic (do bold before italic)
-                $formatted = preg_replace('/\*\*(.*?)\*\*/s', '<strong>$1</strong>', $formatted);
-                $formatted = preg_replace('/\*(.*?)\*/s', '<em>$1</em>', $formatted);
+                // Bold and Italic
+                $formatted = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $formatted);
+                $formatted = preg_replace('/\*(.*?)\*/', '<em>$1</em>', $formatted);
 
-                // Lists: convert lines starting with "* " into <li>
-                $formatted = preg_replace('/(?:\r\n|\r|\n)\* (.*?)(?=(?:\r\n|\r|\n)|$)/', "\n<li>$1</li>\n", $formatted);
-                // Wrap contiguous <li> groups into <ul>
-                $formatted = preg_replace_callback('/(?:\n<li>.*?<\/li>\n)+/s', function($m){
-                    $inner = trim($m[0]);
-                    return '<ul>' . $inner . '</ul>';
-                }, $formatted);
+                // Lists
+                $formatted = preg_replace('/\n\* (.*?)(?=\n|$)/', '<li>$1</li>', $formatted);
+                $formatted = preg_replace('/(<li>.*<\/li>)/s', '<ul>$1</ul>', $formatted);
 
-                // Paragraphs: Turn double line breaks into paragraph separators
-                $formatted = preg_replace("/\r\n\r\n|\n\n|\r\r/", "</p><p>", $formatted);
-                // Wrap whole content in <p> if it doesn't already start with block tags
+                // Paragraphs
+                $formatted = preg_replace('/\n{2,}/', "</p><p>", $formatted);
                 $formatted = '<p>' . $formatted . '</p>';
                 // Convert single newlines to <br />
                 $formatted = nl2br( $formatted );
@@ -502,6 +498,31 @@ function ai_blog_form() {
 
                 // Strip tags not in allowed list and output safely
                 $safe_html = wp_kses( $formatted, $allowed_tags );
+
+           // ======== BLOG GENERATED SUCCESSFULLY ======== //
+                // Increment total blog generation count
+                $total = (int) get_option('autobloggen_total_blogs', 0);
+                update_option('autobloggen_total_blogs', $total + 1);
+
+                // Send event to Google Analytics
+                myplugin_send_event('blog_generated', [
+                    'prompt' => $prompt,
+                    'response_length' => strlen($safe_html)
+                ]);
+
+                // ======== LOG EACH BLOG GENERATION ======== //
+                $logs = get_option('autobloggen_logs', []);
+
+                $logs[] = [
+                    'id' => uniqid('blog_'),
+                    'timestamp' => current_time('mysql'),
+                    'user' => wp_get_current_user()->user_login ?: 'guest'
+                ];
+
+                // Save logs back to database
+                update_option('autobloggen_logs', $logs);
+
+
 
                 // --- Display the output inside styled container --- //
                 $output .= "
@@ -550,3 +571,77 @@ function ai_blog_form() {
 
     return $output;
 }
+// ======== (Existing functions above) ======== //
+// Keep your ai_blog_form() function ending here
+
+// ======== GOOGLE ANALYTICS EVENT FUNCTION ======== //
+function myplugin_send_event($event_name, $params = []) {
+    $measurement_id = 'G-2QDVG8C0EQ'; // Replace with your GA4 Measurement ID
+    $api_secret = 'bvBc3YhKTRCTlhBKEs5Rkw';  // Replace with your GA4 API Secret
+    $client_id = get_option('myplugin_client_id');
+
+    // Generate unique ID per site if not exists
+    if (!$client_id) {
+        $client_id = wp_generate_uuid4();
+        update_option('myplugin_client_id', $client_id);
+    }
+
+    $data = [
+        'client_id' => $client_id,
+        'events' => [
+            [
+                'name' => $event_name,
+                'params' => $params
+            ]
+        ]
+    ];
+
+    wp_remote_post("https://www.google-analytics.com/mp/collect?measurement_id={$measurement_id}&api_secret={$api_secret}", [
+        'headers' => ['Content-Type' => 'application/json'],
+        'body' => wp_json_encode($data),
+        'timeout' => 5
+    ]);
+}
+
+// ======== REST API ENDPOINT FOR ANALYTICS ======== //
+add_action('rest_api_init', function () {
+
+    // ✅ Endpoint 1: Overall stats
+    register_rest_route('autobloggen/v1', '/stats', [
+        'methods' => 'GET',
+        'callback' => 'autobloggen_get_stats',
+        'permission_callback' => '__return_true',
+    ]);
+
+    // ✅ Endpoint 2: Blog generation timestamps
+    register_rest_route('autobloggen/v1', '/logs', [
+        'methods' => 'GET',
+        'callback' => 'autobloggen_get_logs',
+        'permission_callback' => '__return_true',
+    ]);
+});
+
+
+// ======== CALLBACK: /autobloggen/v1/stats ======== //
+function autobloggen_get_stats() {
+    $logs = get_option('autobloggen_logs', []);
+
+    return [
+        'total_blogs_generated' => (int) get_option('autobloggen_total_blogs', 0),
+        'last_generated' => !empty($logs) ? end($logs)['timestamp'] : null,
+        'plugin_version' => '1.1',
+        'site_url' => get_site_url(),
+    ];
+}
+
+
+// ======== CALLBACK: /autobloggen/v1/logs ======== //
+function autobloggen_get_logs() {
+    $logs = get_option('autobloggen_logs', []);
+    return [
+        'total' => count($logs),
+        'logs' => $logs
+    ];
+}
+
+

@@ -1,0 +1,161 @@
+.expli-forms-root {
+  background: #f8f8f8;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.ef-btn {
+  background: #eee;
+  padding: 7px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  border: 1px solid #ccc;
+}
+
+.ef-btn-primary {
+  background: #0acd63;
+  color: #fff;
+}
+
+.ef-template-card {
+  width: 220px;
+  padding: 10px;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.ef-template-thumb {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.ef-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ef-modal-inner {
+  background: white;
+  width: 80%;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+.ef-field-item {
+  background: #fff;
+  padding: 10px;
+  border: 1px solid #ddd;
+  margin-bottom: 5px;
+  border-radius: 5px;
+}
+
+/* .ef-btn-primary {
+  background: #007bff;
+  background: linear-gradient(135deg, #1b879f 0%, #3a7bd5 100%);
+  color: #fff;
+  border-color: #4299e1;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(0, 210, 255, 0.2);
+}
+.ef-btn-primary:hover {
+  background: linear-gradient(135deg, #00b0ff 0%, #2a61b2 100%);
+  border-color: #3182ce;
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(0, 210, 255, 0.4);
+} */
+/* 
+.ef-btn-primary {
+  background: #003366;
+  background: linear-gradient(135deg, #003366 0%, #005691 100%);
+  color: #fff;
+  border: 1px solid #003366;
+  font-weight: 600;
+  box-shadow: 0 4px 10px rgba(0, 51, 102, 0.3);
+  transition: all 0.3s ease;
+}
+.ef-btn-primary:hover {
+  background: linear-gradient(135deg, #002244 0%, #004d80 100%);
+  border-color: #002244;
+  color: #fff;
+  box-shadow: 0 6px 15px rgba(0, 51, 102, 0.5);
+  transform: translateY(-1px);
+} */
+/* Template card hover effects (FormCrafted) */
+
+.fc-template-card {
+  border: 2px solid #05305f;
+  transition: transform 220ms cubic-bezier(0.2, 0.9, 0.2, 1),
+    box-shadow 220ms ease, border-color 220ms ease;
+  will-change: transform, box-shadow;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+/* subtle lift + stronger border + shadow */
+.fc-template-card:hover,
+.fc-template-card:focus-within {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 18px 40px rgba(14, 30, 37, 0.12),
+    0 6px 14px rgba(14, 30, 37, 0.06);
+  border-color: rgba(58, 123, 213, 0.18);
+  z-index: 2;
+}
+
+/* image zoom on hover (pleasant micro-interaction) */
+.fc-template-thumb {
+  transition: transform 320ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  display: block;
+}
+.fc-template-card:hover .fc-template-thumb,
+.fc-template-card:focus-within .fc-template-thumb {
+  transform: scale(1.06);
+}
+
+/* reveal the "Use" button on hover (initially subtle) */
+.fc-template-card .fc-btn {
+  transition: opacity 180ms ease, transform 180ms ease;
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none; /* prevent tab focus when hidden */
+}
+
+/* show button on hover */
+.fc-template-card:hover .fc-btn,
+.fc-template-card:focus-within .fc-btn {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* emphasize template name */
+.fc-template-name {
+  transition: color 180ms ease;
+}
+.fc-template-card:hover .fc-template-name,
+.fc-template-card:focus-within .fc-template-name {
+  color: #0b63b7;
+}
+
+/* small accessibility: keyboard-visible focus outline */
+.fc-template-card:focus-within {
+  outline: 3px solid rgba(58, 123, 213, 0.12);
+  outline-offset: 2px;
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .fc-template-card,
+  .fc-template-thumb,
+  .fc-template-card .fc-btn,
+  .fc-template-name {
+    transition: none !important;
+  }
+}

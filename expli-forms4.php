@@ -1,8 +1,8 @@
 <?php
 /*
 Plugin Name: expli-forms
-Description: Frontend form templates and lightweight visual editor for all users. Add [expli_forms] anywhere.
-Version: 1.6
+Description: Form builder with a WPForms-style Admin Overview and Frontend Editor.
+Version: 1.7
 Author: (You)
 Text Domain: expli-forms
 */
@@ -17,32 +17,118 @@ class Expli_Forms_Plugin {
     private $option_submissions_key = 'expli_forms_submissions';
 
     public function __construct() {
+        // Frontend Assets
         add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_assets' ] );
+        
+        // Backend (Admin) Menu - NEW
+        add_action( 'admin_menu', [ $this, 'register_admin_menu' ] );
+
+        // Shortcode
         add_shortcode( 'expli_forms', [ $this, 'shortcode_render' ] );
 
+        // AJAX Handlers
         add_action( 'wp_ajax_expli_save_form', [ $this, 'ajax_save_form' ] );
         add_action( 'wp_ajax_nopriv_expli_save_form', [ $this, 'ajax_save_form' ] );
-
         add_action( 'wp_ajax_expli_submit_form', [ $this, 'ajax_submit_form' ] );
         add_action( 'wp_ajax_nopriv_expli_submit_form', [ $this, 'ajax_submit_form' ] );
     }
 
+    // ---------------------------------------------------------
+    // 1. ADMIN DASHBOARD LOGIC (NEW)
+    // ---------------------------------------------------------
+
+    public function register_admin_menu() {
+        add_menu_page(
+            'Expli Forms', 
+            'Expli Forms', 
+            'manage_options', 
+            'expli-forms', 
+            [ $this, 'render_admin_dashboard' ], 
+            'dashicons-feedback', 
+            25 
+        );
+    }
+
+    public function render_admin_dashboard() {
+        // Handle Delete Action
+        if ( isset( $_GET['action'] ) && $_GET['action'] === 'delete' && isset( $_GET['form_id'] ) ) {
+            $this->delete_form( sanitize_text_field( $_GET['form_id'] ) );
+            echo '<div class="notice notice-success is-dismissible"><p>Form deleted.</p></div>';
+        }
+
+        $forms = get_option( $this->option_forms_key, [] );
+        ?>
+        <div class="wrap">
+            <h1 class="wp-heading-inline">Forms Overview</h1>
+            <a href="#" class="page-title-action" onclick="alert('To add a new form, please use the [expli_forms] shortcode on a frontend page to access the visual editor.');">Add New</a>
+            <hr class="wp-header-end">
+
+            <form method="get">
+                <input type="hidden" name="page" value="expli-forms" />
+                
+                <?php if ( empty( $forms ) ) : ?>
+                    <div class="notice notice-info"><p>No forms found. Create one using the frontend editor!</p></div>
+                <?php else : ?>
+                    
+                    <table class="wp-list-table widefat fixed striped table-view-list posts">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="manage-column column-title column-primary">Name</th>
+                                <th scope="col" class="manage-column">Shortcode</th>
+                                <th scope="col" class="manage-column">Author</th>
+                                <th scope="col" class="manage-column">Date Created</th>
+                                <th scope="col" class="manage-column">Form ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ( array_reverse($forms) as $id => $form ) : 
+                                $delete_link = admin_url( 'admin.php?page=expli-forms&action=delete&form_id=' . $id );
+                                $author = wp_get_current_user()->display_name; 
+                                $date = isset($form['date']) ? date( 'M j, Y \a\t g:i a', strtotime($form['date']) ) : 'Unknown';
+                            ?>
+                                <tr>
+                                    <td class="title column-title has-row-actions column-primary">
+                                        <strong><?php echo esc_html( $form['name'] ); ?></strong>
+                                        <div class="row-actions">
+                                            <span class="edit"><a href="#" onclick="alert('Please edit this form via the frontend page where you inserted the [expli_forms] shortcode.');">Edit</a> | </span>
+                                            <span class="trash"><a href="<?php echo esc_url( $delete_link ); ?>" class="submitdelete" onclick="return confirm('Are you sure you want to delete this form?');">Delete</a></span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <code>[expli_forms id="<?php echo esc_attr( $id ); ?>"]</code>
+                                        <button type="button" class="button button-small" onclick="navigator.clipboard.writeText('[expli_forms id=\'<?php echo $id; ?>\']');alert('Shortcode copied!');">Copy</button>
+                                    </td>
+                                    <td><?php echo esc_html( $author ); ?></td>
+                                    <td><?php echo esc_html( $date ); ?></td>
+                                    <td><?php echo esc_html( $id ); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+            </form>
+        </div>
+        <?php
+    }
+
+    private function delete_form( $id ) {
+        $forms = get_option( $this->option_forms_key, [] );
+        if ( isset( $forms[ $id ] ) ) {
+            unset( $forms[ $id ] );
+            update_option( $this->option_forms_key, $forms );
+        }
+    }
+
+    // ---------------------------------------------------------
+    // 2. FRONTEND ASSETS & SHORTCODE
+    // ---------------------------------------------------------
+
     public function enqueue_assets() {
         $handle = 'expli-forms-frontend';
-        $thumb_blank = plugins_url('assets/images/blank.png', __FILE__);
-        $thumb_signup = plugins_url('assets/images/signup.png', __FILE__);
-        $thumb_contact = plugins_url('assets/images/contact.png', __FILE__);
-        $thumb_college = plugins_url('assets/images/college.png', __FILE__);
-        $thumb_enrollment = plugins_url('assets/images/enrollment.png', __FILE__);
-        $thumb_lesson = plugins_url('assets/images/lesson.png', __FILE__);
-        $thumb_meeting = plugins_url('assets/images/meeting.png', __FILE__);
-        $thumb_newyear = plugins_url('assets/images/newyear.png', __FILE__);
-        $thumb_toc = plugins_url('assets/images/toc.png', __FILE__);
-
         
         // Register handles
-        wp_register_script( $handle, plugins_url( 'assets/expli-forms.js', __FILE__ ), [ 'jquery' ], '1.6', true );
-        wp_register_style( 'expli-forms-style', plugins_url( 'assets/expli-forms.css', __FILE__ ), [], '1.6' );
+        wp_register_script( $handle, plugins_url( 'assets/expli-forms.js', __FILE__ ), [ 'jquery' ], '1.7', true );
+        wp_register_style( 'expli-forms-style', plugins_url( 'assets/expli-forms.css', __FILE__ ), [], '1.7' );
 
         wp_enqueue_script( $handle );
         wp_enqueue_style( 'expli-forms-style' );
@@ -56,82 +142,119 @@ class Expli_Forms_Plugin {
         ];
         wp_localize_script( $handle, 'ExpliFormsData', $data );
 
-        // Inline styles (Fallback)
-        $css = $this->inline_css();
-        wp_add_inline_style( 'expli-forms-style', $css );
-
-        // Inline JS (Fallback)
-        $js = $this->inline_js();
-        wp_add_inline_script( $handle, $js );
+        // Inline styles & JS (Fallback)
+        wp_add_inline_style( 'expli-forms-style', $this->inline_css() );
+        wp_add_inline_script( $handle, $this->inline_js() );
     }
 
-    // Shortcode output
+    // Shortcode output - Updated to handle ID attribute
     public function shortcode_render( $atts = [] ) {
         $atts = shortcode_atts( [
-            'container_class' => 'expli-forms-root'
+            'container_class' => 'expli-forms-root',
+            'id' => '' 
         ], $atts, 'expli_forms' );
 
         ob_start();
-        ?>
-        <div class="<?php echo esc_attr( $atts['container_class'] ); ?>">
-            <div class="expli-forms-header" style="display:flex; justify-content:space-between; margin-bottom:20px; align-items:center; border-bottom:1px solid #ddd; padding-bottom:15px;">
-                <h2 style="margin:0; color:#333;">Expli-Forms</h2>
-                <div class="expli-forms-actions">
-                    <button class="ef-btn ef-btn-primary" id="ef-open-saved">Forms Overview</button>
-                    <button class="ef-btn" id="ef-open-templates">Add New (Templates)</button>
-                </div>
-            </div>
 
-            <div id="ef-templates-panel" class="ef-panel" style="display:none;"></div>
-
-            <div id="ef-saved-panel" class="ef-panel"></div>
-
-            <div id="ef-editor-modal" class="ef-modal" style="display:none;">
-                <div class="ef-modal-inner" style="position:relative;">
-                    <button class="ef-close" id="ef-close-editor-top" style="position:absolute; top:10px; right:10px; border:none; background:none; font-size:30px; line-height:1; cursor:pointer; color:#777; transition:color 0.2s; padding:0 10px;" onmouseover="this.style.color='#333';" onmouseout="this.style.color='#777';">&times;</button>
-                    <div class="ef-editor-header" style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px;">
-                        <h3 style="margin:0;">Edit Form</h3>
-                        <button class="ef-close" id="ef-close-editor" style="border:none; background:none; font-size:24px; cursor:pointer;">&times;</button>
-                    </div>
-                    
-                    <div class="ef-editor-body" style="display:flex; gap:20px;">
-                        <div class="ef-left" style="width:40%; display:flex; flex-direction:column;">
-                            <label style="display:block; margin-bottom:5px; font-weight:bold;">Form Name:</label>
-                            <input type="text" id="ef-form-name" class="ef-input" style="width:100%; margin-bottom:15px;" />
-                            
-                            <h4 style="margin: 0 0 10px 0;">Form Fields</h4>
-                            <div id="ef-fields-list" class="ef-fields-list" style="flex:1; max-height:400px; overflow-y:auto; padding-right:5px; border:1px solid #ddd; background:#f9f9f9; padding:10px; border-radius:4px;"></div>
-
-                            <div class="ef-field-controls" style="margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
-                                <select id="ef-new-type" style="padding:7px; border-radius:4px; border:1px solid #ccc;">
-                                    <option value="text">Single line (text)</option>
-                                    <option value="textarea">Paragraph</option>
-                                    <option value="email">Email</option>
-                                    <option value="number">Number</option>
-                                    <option value="select">Dropdown</option>
-                                    <option value="checkbox">Checkbox</option>
-                                </select>
-                                <button class="ef-btn ef-btn-primary" id="ef-add-field">+ Add Field</button>
-                            </div>
-                        </div>
-
-                        <div class="ef-right" style="width:60%;">
-                            <h4 style="margin: 0 0 10px 0;">Live Preview</h4>
-                            <div id="ef-form-preview" class="ef-form-preview"></div>
-
-                            <div class="ef-editor-actions" style="margin-top:20px; text-align:right;">
-                                <button class="ef-btn ef-btn-primary" id="ef-save-custom">Save Form</button>
-                                <button class="ef-btn" id="ef-publish-form">Insert & Publish</button>
-                            </div>
-                        </div>
+        // CASE 1: Render Specific Form (Embedding)
+        if ( ! empty( $atts['id'] ) ) {
+            $forms = get_option( $this->option_forms_key, [] );
+            if ( isset( $forms[ $atts['id'] ] ) ) {
+                $this->render_form_html( $forms[ $atts['id'] ] );
+            } else {
+                echo '<p>Form not found.</p>';
+            }
+        } 
+        // CASE 2: Render Editor Dashboard
+        else {
+            ?>
+            <div class="<?php echo esc_attr( $atts['container_class'] ); ?>">
+                <div class="expli-forms-header" style="display:flex; justify-content:space-between; margin-bottom:20px; align-items:center; border-bottom:1px solid #ddd; padding-bottom:15px;">
+                    <h2 style="margin:0; color:#333;">Expli-Forms</h2>
+                    <div class="expli-forms-actions">
+                        <button class="ef-btn ef-btn-primary" id="ef-open-saved">Forms Overview</button>
+                        <button class="ef-btn" id="ef-open-templates">Add New (Templates)</button>
                     </div>
                 </div>
-            </div>
 
-            <div id="ef-published-area"></div>
-        </div>
-        <?php
+                <div id="ef-templates-panel" class="ef-panel" style="display:none;"></div>
+                <div id="ef-saved-panel" class="ef-panel"></div>
+
+                <div id="ef-editor-modal" class="ef-modal" style="display:none;">
+                    <div class="ef-modal-inner" style="position:relative;">
+                        <button class="ef-close" id="ef-close-editor-top" style="position:absolute; top:10px; right:10px; border:none; background:none; font-size:30px; line-height:1; cursor:pointer; color:#777;">&times;</button>
+                        <div class="ef-editor-header" style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px;">
+                            <h3 style="margin:0;">Edit Form</h3>
+                            <button class="ef-close" id="ef-close-editor" style="border:none; background:none; font-size:24px; cursor:pointer;">&times;</button>
+                        </div>
+                        
+                        <div class="ef-editor-body" style="display:flex; gap:20px;">
+                            <div class="ef-left" style="width:40%; display:flex; flex-direction:column;">
+                                <label style="display:block; margin-bottom:5px; font-weight:bold;">Form Name:</label>
+                                <input type="text" id="ef-form-name" class="ef-input" style="width:100%; margin-bottom:15px;" />
+                                
+                                <h4 style="margin: 0 0 10px 0;">Form Fields</h4>
+                                <div id="ef-fields-list" class="ef-fields-list" style="flex:1; max-height:400px; overflow-y:auto; padding-right:5px; border:1px solid #ddd; background:#f9f9f9; padding:10px; border-radius:4px;"></div>
+
+                                <div class="ef-field-controls" style="margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
+                                    <select id="ef-new-type" style="padding:7px; border-radius:4px; border:1px solid #ccc;">
+                                        <option value="text">Single line (text)</option>
+                                        <option value="textarea">Paragraph</option>
+                                        <option value="email">Email</option>
+                                        <option value="number">Number</option>
+                                        <option value="select">Dropdown</option>
+                                        <option value="checkbox">Checkbox</option>
+                                    </select>
+                                    <button class="ef-btn ef-btn-primary" id="ef-add-field">+ Add Field</button>
+                                </div>
+                            </div>
+
+                            <div class="ef-right" style="width:60%;">
+                                <h4 style="margin: 0 0 10px 0;">Live Preview</h4>
+                                <div id="ef-form-preview" class="ef-form-preview"></div>
+
+                                <div class="ef-editor-actions" style="margin-top:20px; text-align:right;">
+                                    <button class="ef-btn ef-btn-primary" id="ef-save-custom">Save Form</button>
+                                    <button class="ef-btn" id="ef-publish-form">Insert & Publish</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="ef-published-area"></div>
+            </div>
+            <?php
+        }
         return ob_get_clean();
+    }
+
+    // Helper: Render HTML for specific form
+    private function render_form_html( $form ) {
+        echo '<div class="expli-form-embed">';
+        echo '<h3>' . esc_html( $form['name'] ) . '</h3>';
+        echo '<form class="ef-live-form" data-id="'.esc_attr($form['id']).'">';
+        foreach ( $form['fields'] as $f ) {
+            $req = $f['required'] ? 'required' : '';
+            $lbl = '<label style="font-weight:bold; display:block; margin-top:10px;">' . esc_html( $f['label'] ) . ( $f['required'] ? ' <span style="color:red">*</span>' : '' ) . '</label>';
+            echo $lbl;
+            
+            if ( $f['type'] === 'textarea' ) {
+                echo '<textarea name="'.esc_attr($f['id']).'" class="ef-input" style="width:100%; padding:8px;" '.$req.'></textarea>';
+            } elseif ( $f['type'] === 'select' ) {
+                echo '<select name="'.esc_attr($f['id']).'" class="ef-input" style="width:100%; padding:8px;">';
+                foreach ( ( $f['options'] ?? ['Option 1'] ) as $opt ) {
+                    echo '<option>' . esc_html( $opt ) . '</option>';
+                }
+                echo '</select>';
+            } elseif ( $f['type'] === 'checkbox' ) {
+                echo '<div style="margin:5px 0;"><label><input type="checkbox" name="'.esc_attr($f['id']).'"> ' . esc_html( $f['label'] ) . '</label></div>';
+            } else {
+                echo '<input type="'.esc_attr($f['type']).'" name="'.esc_attr($f['id']).'" class="ef-input" style="width:100%; padding:8px;" '.$req.'>';
+            }
+        }
+        echo '<button type="submit" class="ef-btn ef-btn-primary" style="margin-top:15px; padding:10px 20px;">Submit</button>';
+        echo '</form></div>';
     }
 
     // Default templates
@@ -146,146 +269,26 @@ class Expli_Forms_Plugin {
         $thumb_newyear = plugins_url('assets/images/newyear.png', __FILE__);
         $thumb_toc = plugins_url('assets/images/toc.png', __FILE__);
 
-
-        $templates = [
-            // --- 0. BLANK FORM TEMPLATE ---
-            [
-                'id' => 'tpl_blank',
-                'name' => 'Blank Form',
-                'thumbnail' => $thumb_blank,
-                'fields' => [], // Empty array = No fields
-            ],
-            
-            // --- EXISTING TEMPLATES ---
-            [
-                'id' => 'tpl_contact',
-                'name' => 'Contact Us',
-                'thumbnail' => $thumb_contact,
-                'fields' => [
-                    ['id'=>'f1','label'=>'Full Name','type'=>'text','required'=>true],
-                    ['id'=>'f2','label'=>'Email','type'=>'email','required'=>true],
-                    ['id'=>'f3','label'=>'Message','type'=>'textarea','required'=>true],
-                ],
-            ],
-            [
-                'id' => 'tpl_signup',
-                'name' => 'Sign Up',
-                'thumbnail' => $thumb_signup,
-                'fields' => [
-                    ['id'=>'f1','label'=>'First Name','type'=>'text','required'=>true],
-                    ['id'=>'f2','label'=>'Last Name','type'=>'text','required'=>false],
-                    ['id'=>'f3','label'=>'Email','type'=>'email','required'=>true],
-                ],
-            ],
-            [
-                'id' => 'tpl_college',
-                'name' => 'College Application Form',
-                'thumbnail' => $thumb_college,
-                'fields' => [
-                    ['id'=>'c1', 'label'=>'Email', 'type'=>'email', 'required'=>true],
-                    ['id'=>'c2', 'label'=>'Address Line 1', 'type'=>'text', 'required'=>false],
-                    ['id'=>'c3', 'label'=>'Address Line 2', 'type'=>'text', 'required'=>false],
-                    ['id'=>'c4', 'label'=>'City', 'type'=>'text', 'required'=>false],
-                    ['id'=>'c5', 'label'=>'State', 'type'=>'select', 'options'=>['--- Select State ---', 'California', 'New York', 'Texas', 'Florida', 'Washington', 'Other']],
-                    ['id'=>'c6', 'label'=>'Zip Code', 'type'=>'number', 'required'=>false],
-                ],
-            ],
-            [
-                'id' => 'tpl_enrollment',
-                'name' => 'Enrollment Form',
-                'thumbnail' => $thumb_enrollment,
-                'fields' => [
-                    ['id'=>'e1', 'label'=>'First Name', 'type'=>'text', 'required'=>true],
-                    ['id'=>'e2', 'label'=>'Last Name', 'type'=>'text', 'required'=>true],
-                    ['id'=>'e3', 'label'=>'Email', 'type'=>'email', 'required'=>true],
-                    ['id'=>'e4', 'label'=>'Address Line 1', 'type'=>'text', 'required'=>false],
-                    ['id'=>'e5', 'label'=>'Address Line 2', 'type'=>'text', 'required'=>false],
-                    ['id'=>'e6', 'label'=>'City', 'type'=>'text', 'required'=>false],
-                    ['id'=>'e7', 'label'=>'State / Province / Region', 'type'=>'text', 'required'=>false],
-                    ['id'=>'e8', 'label'=>'Country', 'type'=>'select', 'options'=>['Afghanistan', 'Australia', 'Canada', 'India', 'United Kingdom', 'United States']],
-                    ['id'=>'e9', 'label'=>'Postal Code', 'type'=>'text', 'required'=>false],
-                ],
-            ],
-            [
-                'id' => 'tpl_rsvp',
-                'name' => 'New Years Party RSVP',
-                'thumbnail' => $thumb_newyear,
-                'fields' => [
-                    ['id'=>'r1', 'label'=>'First Name', 'type'=>'text', 'required'=>true],
-                    ['id'=>'r2', 'label'=>'Last Name', 'type'=>'text', 'required'=>true],
-                    ['id'=>'r3', 'label'=>'Email', 'type'=>'email', 'required'=>true],
-                    ['id'=>'r4', 'label'=>'Can you make it?', 'type'=>'select', 'options'=>['Yes', 'No', 'Not sure']],
-                    ['id'=>'r5', 'label'=>'How many people will be joining you?', 'type'=>'select', 'options'=>['Just me', 'Plus 1', 'Plus 2', 'Plus 3+']],
-                    ['id'=>'r6', 'label'=>'I am bringing Snacks', 'type'=>'checkbox', 'required'=>false],
-                    ['id'=>'r7', 'label'=>'I am bringing Desserts', 'type'=>'checkbox', 'required'=>false],
-                    ['id'=>'r8', 'label'=>'I am bringing Beverages', 'type'=>'checkbox', 'required'=>false],
-                    ['id'=>'r9', 'label'=>'Anything else we should know?', 'type'=>'textarea', 'required'=>false],
-                ],
-            ],
-            [
-                'id' => 'tpl_tos',
-                'name' => 'Terms of Service Contact',
-                'thumbnail' => $thumb_toc,
-                'fields' => [
-                    ['id'=>'t1', 'label'=>'First Name', 'type'=>'text', 'required'=>true],
-                    ['id'=>'t2', 'label'=>'Last Name', 'type'=>'text', 'required'=>false],
-                    ['id'=>'t3', 'label'=>'Email', 'type'=>'email', 'required'=>true],
-                    ['id'=>'t4', 'label'=>'Comment or Message', 'type'=>'textarea', 'required'=>true],
-                    ['id'=>'t5', 'label'=>'I accept the terms of service', 'type'=>'checkbox', 'required'=>true],
-                ],
-            ],
-            [
-                'id' => 'tpl_meeting',
-                'name' => 'Meeting Room Registration',
-                'thumbnail' => $thumb_meeting,
-                'fields' => [
-                    ['id'=>'m1', 'label'=>'First Name', 'type'=>'text', 'required'=>true],
-                    ['id'=>'m2', 'label'=>'Last Name', 'type'=>'text', 'required'=>true],
-                    ['id'=>'m3', 'label'=>'Email', 'type'=>'email', 'required'=>true],
-                    ['id'=>'m4', 'label'=>'Department', 'type'=>'text', 'required'=>false],
-                    ['id'=>'m5', 'label'=>'Which room would you like to reserve?', 'type'=>'select', 'options'=>['Room A', 'Room B', 'Room C']],
-                    ['id'=>'m6', 'label'=>'Which time block?', 'type'=>'select', 'options'=>['8:00 - 9:00am', '9:00 - 10:00am', '10:00 - 11:00am', '11:00 - 12:00pm', '1:00 - 2:00pm', '2:00 - 3:00pm']],
-                    ['id'=>'m7', 'label'=>'Questions or Comments', 'type'=>'textarea', 'required'=>false],
-                ],
-            ],
-            [
-                'id' => 'tpl_lesson',
-                'name' => 'Lesson Plan Form',
-                'thumbnail' => $thumb_lesson,
-                'fields' => [
-                    ['id'=>'l1', 'label'=>'Subject', 'type'=>'text', 'required'=>false],
-                    ['id'=>'l2', 'label'=>'Teaching Topic', 'type'=>'text', 'required'=>false],
-                    ['id'=>'l3', 'label'=>'Lesson Plan Title', 'type'=>'text', 'required'=>false],
-                    ['id'=>'l4', 'label'=>'Standard Addressed (Choice 1)', 'type'=>'checkbox', 'required'=>false],
-                    ['id'=>'l5', 'label'=>'Standard Addressed (Choice 2)', 'type'=>'checkbox', 'required'=>false],
-                    ['id'=>'l6', 'label'=>'Goals/Objectives of Lesson Plans', 'type'=>'textarea', 'required'=>false],
-                    ['id'=>'l7', 'label'=>'Material: Photos', 'type'=>'checkbox', 'required'=>false],
-                    ['id'=>'l8', 'label'=>'Material: Electronic Devices', 'type'=>'checkbox', 'required'=>false],
-                    ['id'=>'l9', 'label'=>'Material: Paper and Pencil', 'type'=>'checkbox', 'required'=>false],
-                    ['id'=>'l10', 'label'=>'Step-by-Step Procedure', 'type'=>'textarea', 'required'=>false],
-                    ['id'=>'l11', 'label'=>'Additional Comments', 'type'=>'textarea', 'required'=>false],
-                    ['id'=>'l12', 'label'=>'Teacher First Name', 'type'=>'text', 'required'=>true],
-                    ['id'=>'l13', 'label'=>'Teacher Last Name', 'type'=>'text', 'required'=>true],
-                    ['id'=>'l14', 'label'=>'Email', 'type'=>'email', 'required'=>true],
-                ],
-            ],
+        return [
+            ['id' => 'tpl_blank', 'name' => 'Blank Form', 'thumbnail' => $thumb_blank, 'fields' => []],
+            ['id' => 'tpl_contact', 'name' => 'Contact Us', 'thumbnail' => $thumb_contact, 'fields' => [['id'=>'f1','label'=>'Full Name','type'=>'text','required'=>true],['id'=>'f2','label'=>'Email','type'=>'email','required'=>true],['id'=>'f3','label'=>'Message','type'=>'textarea','required'=>true]]],
+            ['id' => 'tpl_signup', 'name' => 'Sign Up', 'thumbnail' => $thumb_signup, 'fields' => [['id'=>'f1','label'=>'First Name','type'=>'text','required'=>true],['id'=>'f2','label'=>'Last Name','type'=>'text','required'=>false],['id'=>'f3','label'=>'Email','type'=>'email','required'=>true]]],
+            ['id' => 'tpl_college', 'name' => 'College Application Form', 'thumbnail' => $thumb_college, 'fields' => [['id'=>'c1', 'label'=>'Email', 'type'=>'email', 'required'=>true],['id'=>'c2', 'label'=>'Address Line 1', 'type'=>'text', 'required'=>false],['id'=>'c3', 'label'=>'Address Line 2', 'type'=>'text', 'required'=>false],['id'=>'c4', 'label'=>'City', 'type'=>'text', 'required'=>false],['id'=>'c5', 'label'=>'State', 'type'=>'select', 'options'=>['--- Select State ---', 'California', 'New York', 'Texas', 'Florida', 'Washington', 'Other']],['id'=>'c6', 'label'=>'Zip Code', 'type'=>'number', 'required'=>false]]],
+            ['id' => 'tpl_enrollment', 'name' => 'Enrollment Form', 'thumbnail' => $thumb_enrollment, 'fields' => [['id'=>'e1', 'label'=>'First Name', 'type'=>'text', 'required'=>true],['id'=>'e2', 'label'=>'Last Name', 'type'=>'text', 'required'=>true],['id'=>'e3', 'label'=>'Email', 'type'=>'email', 'required'=>true],['id'=>'e4', 'label'=>'Address Line 1', 'type'=>'text', 'required'=>false],['id'=>'e5', 'label'=>'Address Line 2', 'type'=>'text', 'required'=>false],['id'=>'e6', 'label'=>'City', 'type'=>'text', 'required'=>false],['id'=>'e7', 'label'=>'State / Province / Region', 'type'=>'text', 'required'=>false],['id'=>'e8', 'label'=>'Country', 'type'=>'select', 'options'=>['Afghanistan', 'Australia', 'Canada', 'India', 'United Kingdom', 'United States']],['id'=>'e9', 'label'=>'Postal Code', 'type'=>'text', 'required'=>false]]],
+            ['id' => 'tpl_rsvp', 'name' => 'New Years Party RSVP', 'thumbnail' => $thumb_newyear, 'fields' => [['id'=>'r1', 'label'=>'First Name', 'type'=>'text', 'required'=>true],['id'=>'r2', 'label'=>'Last Name', 'type'=>'text', 'required'=>true],['id'=>'r3', 'label'=>'Email', 'type'=>'email', 'required'=>true],['id'=>'r4', 'label'=>'Can you make it?', 'type'=>'select', 'options'=>['Yes', 'No', 'Not sure']],['id'=>'r5', 'label'=>'How many people will be joining you?', 'type'=>'select', 'options'=>['Just me', 'Plus 1', 'Plus 2', 'Plus 3+']],['id'=>'r6', 'label'=>'I am bringing Snacks', 'type'=>'checkbox', 'required'=>false],['id'=>'r7', 'label'=>'I am bringing Desserts', 'type'=>'checkbox', 'required'=>false],['id'=>'r8', 'label'=>'I am bringing Beverages', 'type'=>'checkbox', 'required'=>false],['id'=>'r9', 'label'=>'Anything else we should know?', 'type'=>'textarea', 'required'=>false]]],
+            ['id' => 'tpl_tos', 'name' => 'Terms of Service Contact', 'thumbnail' => $thumb_toc, 'fields' => [['id'=>'t1', 'label'=>'First Name', 'type'=>'text', 'required'=>true],['id'=>'t2', 'label'=>'Last Name', 'type'=>'text', 'required'=>false],['id'=>'t3', 'label'=>'Email', 'type'=>'email', 'required'=>true],['id'=>'t4', 'label'=>'Comment or Message', 'type'=>'textarea', 'required'=>true],['id'=>'t5', 'label'=>'I accept the terms of service', 'type'=>'checkbox', 'required'=>true]]],
+            ['id' => 'tpl_meeting', 'name' => 'Meeting Room Registration', 'thumbnail' => $thumb_meeting, 'fields' => [['id'=>'m1', 'label'=>'First Name', 'type'=>'text', 'required'=>true],['id'=>'m2', 'label'=>'Last Name', 'type'=>'text', 'required'=>true],['id'=>'m3', 'label'=>'Email', 'type'=>'email', 'required'=>true],['id'=>'m4', 'label'=>'Department', 'type'=>'text', 'required'=>false],['id'=>'m5', 'label'=>'Which room would you like to reserve?', 'type'=>'select', 'options'=>['Room A', 'Room B', 'Room C']],['id'=>'m6', 'label'=>'Which time block?', 'type'=>'select', 'options'=>['8:00 - 9:00am', '9:00 - 10:00am', '10:00 - 11:00am', '11:00 - 12:00pm', '1:00 - 2:00pm', '2:00 - 3:00pm']],['id'=>'m7', 'label'=>'Questions or Comments', 'type'=>'textarea', 'required'=>false]]],
+            ['id' => 'tpl_lesson', 'name' => 'Lesson Plan Form', 'thumbnail' => $thumb_lesson, 'fields' => [['id'=>'l1', 'label'=>'Subject', 'type'=>'text', 'required'=>false],['id'=>'l2', 'label'=>'Teaching Topic', 'type'=>'text', 'required'=>false],['id'=>'l3', 'label'=>'Lesson Plan Title', 'type'=>'text', 'required'=>false],['id'=>'l4', 'label'=>'Standard Addressed (Choice 1)', 'type'=>'checkbox', 'required'=>false],['id'=>'l5', 'label'=>'Standard Addressed (Choice 2)', 'type'=>'checkbox', 'required'=>false],['id'=>'l6', 'label'=>'Goals/Objectives of Lesson Plans', 'type'=>'textarea', 'required'=>false],['id'=>'l7', 'label'=>'Material: Photos', 'type'=>'checkbox', 'required'=>false],['id'=>'l8', 'label'=>'Material: Electronic Devices', 'type'=>'checkbox', 'required'=>false],['id'=>'l9', 'label'=>'Material: Paper and Pencil', 'type'=>'checkbox', 'required'=>false],['id'=>'l10', 'label'=>'Step-by-Step Procedure', 'type'=>'textarea', 'required'=>false],['id'=>'l11', 'label'=>'Additional Comments', 'type'=>'textarea', 'required'=>false],['id'=>'l12', 'label'=>'Teacher First Name', 'type'=>'text', 'required'=>true],['id'=>'l13', 'label'=>'Teacher Last Name', 'type'=>'text', 'required'=>true],['id'=>'l14', 'label'=>'Email', 'type'=>'email', 'required'=>true]]],
         ];
-
-        return $templates;
     }
 
     public function ajax_save_form() {
         check_ajax_referer( 'expli_forms_nonce', 'nonce' );
         $payload = isset( $_POST['form'] ) ? wp_unslash( $_POST['form'] ) : '';
         $form = json_decode( $payload, true );
+        if ( empty( $form ) || empty( $form['id'] ) ) wp_send_json_error( [ 'message' => 'Invalid form' ] );
 
-        if ( empty( $form ) || empty( $form['id'] ) ) {
-            wp_send_json_error( [ 'message' => 'Invalid form payload' ] );
-        }
-
-        // Add modified date
         $form['date'] = current_time( 'Y-m-d H:i:s' );
-
         $saved = get_option( $this->option_forms_key, [] );
         $saved[ $form['id'] ] = $form;
         update_option( $this->option_forms_key, $saved );
@@ -298,9 +301,7 @@ class Expli_Forms_Plugin {
         $form_id = isset( $_POST['form_id'] ) ? sanitize_text_field( wp_unslash( $_POST['form_id'] ) ) : '';
         $data = isset( $_POST['data'] ) ? wp_unslash( $_POST['data'] ) : '';
 
-        if ( empty( $form_id ) || empty( $data ) ) {
-            wp_send_json_error( [ 'message' => 'Missing form ID or data' ] );
-        }
+        if ( empty( $form_id ) || empty( $data ) ) wp_send_json_error( [ 'message' => 'Missing data' ] );
 
         $entry = [
             'form_id' => $form_id,
@@ -316,48 +317,48 @@ class Expli_Forms_Plugin {
     }
 
     // Inline CSS
-private function inline_css() {
-    return <<<CSS
-    .expli-forms-root {font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif; background: #fff; padding: 30px; border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.08);}
-    .ef-btn { background: #f0f3f6; color: #2c3e50;  border: 1px solid #dcdfe6; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-right: 8px; font-size: 15px; font-weight: 500; transition: all 0.25s ease;}
-    .ef-btn:hover { background: #e5e9ec; border-color: #c9d2da; color: #1a2b3c; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    .ef-btn-primary {background: #007bff;  background: linear-gradient(135deg, #003366 0%, #3a7bd5 100%);color: #fff; border-color: #4299e1;font-weight: 600;  box-shadow: 0 4px 10px rgba(0, 51, 102, 0.3);}
-    .ef-btn-primary:hover {background: linear-gradient(135deg, #002244 0%, #2a61b2 100%);  border-color: #3182ce;color: #fff; box-shadow: 0 6px 15px rgba(0, 51, 102, 0.5);}
-    .ef-btn-tab { background: transparent !important; border: none !important;color: #50575e !important;font-weight: 500;padding: 10px 15px;border-bottom: 2px solid transparent; border-radius: 0;}
-    .ef-btn-tab.active { color: #4299e1 !important;border-bottom-color: #4299e1 !important;font-weight: 600;}
+    private function inline_css() {
+        return <<<CSS
+.expli-forms-root {font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif; background: #fff; padding: 30px; border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.08);}
+.ef-btn { background: #f0f3f6; color: #2c3e50; border: 1px solid #dcdfe6; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-right: 8px; font-size: 15px; font-weight: 500; transition: all 0.25s ease;}
+.ef-btn:hover { background: #e5e9ec; border-color: #c9d2da; color: #1a2b3c; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.ef-btn-primary {background: #007bff; background: linear-gradient(135deg, #003366 0%, #3a7bd5 100%);color: #fff; border-color: #4299e1;font-weight: 600; box-shadow: 0 4px 10px rgba(0, 51, 102, 0.3);}
+.ef-btn-primary:hover {background: linear-gradient(135deg, #002244 0%, #2a61b2 100%); border-color: #3182ce;color: #fff; box-shadow: 0 6px 15px rgba(0, 51, 102, 0.5);}
+.ef-btn-tab { background: transparent !important; border: none !important;color: #50575e !important;font-weight: 500;padding: 10px 15px;border-bottom: 2px solid transparent; border-radius: 0;}
+.ef-btn-tab.active { color: #4299e1 !important;border-bottom-color: #4299e1 !important;font-weight: 600;}
 
-    /* --- Table Styles --- */
-    .ef-table { width: 100%;border-collapse: separate;  border-spacing: 0;margin-top: 20px;border: 1px solid #ebedf0; border-radius: 8px; overflow: hidden; }
-    .ef-table thead { background: #fafafa; }
-    .ef-table th { text-align: left; padding: 14px 20px; border-bottom: 1px solid #ebedf0;font-weight: 600;color: #34495e; font-size: 14px;}
-    .ef-table td { padding: 14px 20px; border-bottom: 1px solid #f0f2f5; color: #50575e;vertical-align: middle; }
-    .ef-table tr:hover {background-color: #f7f9fb; }
-    .ef-table tr:last-child td {border-bottom: none;}
+/* --- Table Styles --- */
+.ef-table { width: 100%;border-collapse: separate; border-spacing: 0;margin-top: 20px;border: 1px solid #ebedf0; border-radius: 8px; overflow: hidden; }
+.ef-table thead { background: #fafafa; }
+.ef-table th { text-align: left; padding: 14px 20px; border-bottom: 1px solid #ebedf0;font-weight: 600;color: #34495e; font-size: 14px;}
+.ef-table td { padding: 14px 20px; border-bottom: 1px solid #f0f2f5; color: #50575e;vertical-align: middle; }
+.ef-table tr:hover {background-color: #f7f9fb; }
+.ef-table tr:last-child td {border-bottom: none;}
 
-    /* --- Templates Grid --- */
-    #ef-templates-panel {display: grid;grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 20px;}
-    .ef-template-card {padding: 20px;border-radius: 10px;background: #fff;border: 1px solid #e1e4e8;box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); text-align: center;transition: transform 0.2s ease, box-shadow 0.2s ease;cursor: pointer;}
-    .ef-template-card:hover {transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);border-color: #4299e1; }
-    .ef-template-thumb { width: 100%;height: 120px; object-fit: cover;border-radius: 8px; background: #f5f6f7; margin-bottom: 15px;}
-    .ef-template-name {font-weight: 600;margin-bottom: 0;color: #2c3e50;font-size: 16px;}
+/* --- Templates Grid --- */
+#ef-templates-panel {display: grid;grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 20px;}
+.ef-template-card {padding: 20px;border-radius: 10px;background: #fff;border: 1px solid #e1e4e8;box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); text-align: center;transition: transform 0.2s ease, box-shadow 0.2s ease;cursor: pointer;}
+.ef-template-card:hover {transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);border-color: #4299e1; }
+.ef-template-thumb { width: 100%;height: 120px; object-fit: cover;border-radius: 8px; background: #f5f6f7; margin-bottom: 15px;}
+.ef-template-name {font-weight: 600;margin-bottom: 0;color: #2c3e50;font-size: 16px;}
 
-    /* --- Editor Modal --- */
-    .ef-modal { position: fixed; inset: 0; background: rgba(44, 62, 80, 0.7); display: flex; justify-content: center; align-items: center; z-index: 99999;}
-    .ef-modal-inner {background: #fff;width: 95%;max-width: 1000px; padding: 30px;border-radius: 12px;max-height: 90vh;overflow-y: auto;box-sizing: border-box;box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25); }
+/* --- Editor Modal --- */
+.ef-modal { position: fixed; inset: 0; background: rgba(44, 62, 80, 0.7); display: flex; justify-content: center; align-items: center; z-index: 99999;}
+.ef-modal-inner {background: #fff;width: 95%;max-width: 1000px; padding: 30px;border-radius: 12px;max-height: 90vh;overflow-y: auto;box-sizing: border-box;box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25); }
 
-    /* --- Editor Fields --- */
-    .ef-field-item { background: #fcfcfc; padding: 12px; border: 1px solid #e1e4e8; margin-bottom: 10px; border-radius: 6px; display: flex; align-items: center; gap: 15px;  transition: border-color 0.2s;}
-    .ef-field-item:hover {border-color: #c9d2da;}
-  
-    .ef-field-label-input {  flex: 1;  min-width: 100px;  padding: 10px 12px;  border: 1px solid #dcdfe6;  background:#fff;  border-radius: 6px;  font-size: 15px;  color: #34495e; transition: all 0.2s ease;}
-    .ef-field-label-input:focus { border-color: #4299e1; box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);  outline: none; }
+/* --- Editor Fields --- */
+.ef-field-item { background: #fcfcfc; padding: 12px; border: 1px solid #e1e4e8; margin-bottom: 10px; border-radius: 6px; display: flex; align-items: center; gap: 15px; transition: border-color 0.2s;}
+.ef-field-item:hover {border-color: #c9d2da;}
 
-    .ef-field-type-select { padding: 10px 12px; border: 1px solid #dcdfe6; border-radius: 6px; background: #fff;}
-    .ef-input { width: 100%; padding: 10px 12px; border: 1px solid #dcdfe6; border-radius: 6px;  margin-top: 6px;  margin-bottom: 12px;  box-sizing: border-box;  transition: border-color 0.2s;}
-    .ef-input:focus {border-color: #4299e1;  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);  outline: none; }
-    .ef-form-preview { background: #f7f9fb; /* Lighter background for preview */padding: 24px; border: 1px dashed #c9d2da; border-radius: 8px; min-height: 250px; margin-top: 15px;}
-    CSS;
-}
+.ef-field-label-input { flex: 1; min-width: 100px; padding: 10px 12px; border: 1px solid #dcdfe6; background:#fff; border-radius: 6px; font-size: 15px; color: #34495e; transition: all 0.2s ease;}
+.ef-field-label-input:focus { border-color: #4299e1; box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2); outline: none; }
+
+.ef-field-type-select { padding: 10px 12px; border: 1px solid #dcdfe6; border-radius: 6px; background: #fff;}
+.ef-input { width: 100%; padding: 10px 12px; border: 1px solid #dcdfe6; border-radius: 6px; margin-top: 6px; margin-bottom: 12px; box-sizing: border-box; transition: border-color 0.2s;}
+.ef-input:focus {border-color: #4299e1; box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2); outline: none; }
+.ef-form-preview { background: #f7f9fb; padding: 24px; border: 1px dashed #c9d2da; border-radius: 8px; min-height: 250px; margin-top: 15px;}
+CSS;
+    }
 
     // Inline JS
     private function inline_js() {
@@ -365,40 +366,22 @@ private function inline_css() {
 (function ($) {
   "use strict";
 
-  function uid(prefix) {
-    return prefix + "_" + Math.random().toString(36).substr(2, 9);
-  }
+  function uid(prefix) { return prefix + "_" + Math.random().toString(36).substr(2, 9); }
+  function escapeHtml(unsafe) { return String(unsafe||"").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 
-  function escapeHtml(unsafe) {
-    if (!unsafe) return "";
-    return String(unsafe)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-
-  // --- RENDERING ---
-
+  // 1. Templates & Grid
   function buildTemplatesGrid() {
     const panel = $("#ef-templates-panel").empty();
     const templates = ExpliFormsData.templates || [];
-
-    if(templates.length === 0) {
-        panel.html('<p>No templates available.</p>');
-        return;
-    }
+    if(templates.length === 0) { panel.html('<p>No templates available.</p>'); return; }
 
     templates.forEach((tpl) => {
       const card = $('<div class="ef-template-card"></div>');
       card.append('<img class="ef-template-thumb" src="'+tpl.thumbnail+'">');
       card.append('<div class="ef-template-name">'+escapeHtml(tpl.name)+'</div>');
-      
       const btn = $('<button class="ef-btn ef-btn-primary">Use Template</button>');
       btn.on("click", () => openEditor(tpl));
       card.append(btn);
-
       panel.append(card);
     });
   }
@@ -408,98 +391,51 @@ private function inline_css() {
     const saved = ExpliFormsData.savedForms || {};
     const keys = Object.keys(saved);
 
-    if (keys.length === 0) {
-        panel.html('<p style="padding:20px; color:#666; text-align:center;">You haven\'t created any forms yet. Click "Add New" to get started.</p>');
-        return;
-    }
+    if (keys.length === 0) { panel.html('<p style="padding:20px; color:#666; text-align:center;">You haven\'t created any forms yet. Click "Add New" to get started.</p>'); return; }
 
-    // Table Header
-    let tableHtml = `
-      <table class="ef-table">
-        <thead>
-          <tr>
-            <th style="width: 30%;">Name</th>
-            <th style="width: 25%;">Shortcode</th>
-            <th style="width: 20%;">Date Created</th>
-            <th style="width: 25%; text-align:right;">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
+    let tableHtml = '<table class="ef-table"><thead><tr><th style="width: 30%;">Name</th><th style="width: 25%;">Shortcode</th><th style="width: 20%;">Date Created</th><th style="width: 25%; text-align:right;">Actions</th></tr></thead><tbody>';
     
-    // Table Body
-    const tbody = $('<tbody></tbody>');
-
     keys.forEach((key) => {
       const tpl = saved[key];
       const formName = tpl.name || '(Untitled)';
-      const shortcode = '[expli_form id="'+tpl.id+'"]'; 
+      const shortcode = '[expli_forms id="'+tpl.id+'"]'; 
       const date = tpl.date || '-';
 
-      const tr = $('<tr></tr>');
-      tr.append('<td><strong style="color:#2271b1;">'+escapeHtml(formName)+'</strong></td>');
-      tr.append('<td><code style="background:#f0f0f1; padding:3px 5px;">'+escapeHtml(shortcode)+'</code></td>');
-      tr.append('<td>'+escapeHtml(date)+'</td>');
-      
-      const actionsTd = $('<td style="text-align:right;"></td>');
-      const editBtn = $('<button class="ef-btn">Edit</button>');
-      editBtn.on("click", () => openEditor(tpl)); // Load specific form data
-      
-      actionsTd.append(editBtn);
-      tr.append(actionsTd);
-      tbody.append(tr);
+      tableHtml += '<tr><td><strong style="color:#2271b1;">'+escapeHtml(formName)+'</strong></td>';
+      tableHtml += '<td><code style="background:#f0f0f1; padding:3px 5px;">'+escapeHtml(shortcode)+'</code></td>';
+      tableHtml += '<td>'+escapeHtml(date)+'</td>';
+      tableHtml += '<td style="text-align:right;"><button class="ef-btn edit-btn" data-id="'+key+'">Edit</button></td></tr>';
     });
-
-    const table = $('<table class="ef-table"><thead><tr><th style="width:30%">Name</th><th style="width:25%">Shortcode</th><th style="width:20%">Date</th><th style="width:25%; text-align:right">Actions</th></tr></thead></table>');
-    table.append(tbody);
-    panel.append(table);
+    tableHtml += '</tbody></table>';
+    
+    const $table = $(tableHtml);
+    $table.find('.edit-btn').on('click', function(){ openEditor(saved[$(this).data('id')]); });
+    panel.append($table);
   }
 
-  // --- EDITOR ---
-
+  // 2. Editor
   function openEditor(tpl) {
-    const modal = $("#ef-editor-modal");
-    modal.show();
-
-    // Deep copy to avoid modifying local cache directly until save
+    $("#ef-editor-modal").show();
     const formData = JSON.parse(JSON.stringify(tpl));
     if(!formData.id) formData.id = uid('form');
-
     $("#ef-form-name").val(formData.name || 'Untitled Form');
     $("#ef-editor-modal").data("editing", formData);
-
-    renderFields();
-    renderPreview();
+    renderFields(); renderPreview();
   }
 
   function renderFields() {
     const form = $("#ef-editor-modal").data("editing");
     const list = $("#ef-fields-list").empty();
-
     if(!form.fields) form.fields = [];
 
     form.fields.forEach((f, index) => {
       const item = $('<div class="ef-field-item"></div>');
-      
-      const lblInput = $('<input type="text" class="ef-field-label-input" placeholder="Field Label">');
-      lblInput.val(f.label); 
-      lblInput.on("input", function() { f.label = $(this).val(); renderPreview(); });
-      
-      const typeSel = $('<select class="ef-field-type-select"><option value="text">text</option><option value="textarea">textarea</option><option value="email">email</option><option value="number">number</option><option value="select">select</option><option value="checkbox">checkbox</option></select>');
-      typeSel.val(f.type);
-      typeSel.on("change", function() { f.type = $(this).val(); renderPreview(); });
+      const lblInput = $('<input type="text" class="ef-field-label-input" placeholder="Field Label">').val(f.label).on("input", function() { f.label = $(this).val(); renderPreview(); });
+      const typeSel = $('<select class="ef-field-type-select"><option value="text">text</option><option value="textarea">textarea</option><option value="email">email</option><option value="number">number</option><option value="select">select</option><option value="checkbox">checkbox</option></select>').val(f.type).on("change", function() { f.type = $(this).val(); renderPreview(); });
+      const reqLabel = $('<label style="white-space:nowrap; font-size:0.9em;"><input type="checkbox" '+(f.required?'checked':'')+'> Req</label>').find('input').on('change', function() { f.required = $(this).is(':checked'); renderPreview(); }).end();
+      const removeBtn = $('<button class="ef-btn" style="background:#ffdddd; border-color:#d63638; color:#d63638; padding:5px 10px;">&times;</button>').on("click", function() { form.fields.splice(index, 1); renderFields(); renderPreview(); });
 
-      const reqLabel = $('<label style="white-space:nowrap; font-size:0.9em;"><input type="checkbox" '+(f.required?'checked':'')+'> Req</label>');
-      reqLabel.find('input').on('change', function() { f.required = $(this).is(':checked'); renderPreview(); });
-
-      const removeBtn = $('<button class="ef-btn" style="background:#ffdddd; border-color:#d63638; color:#d63638; padding:5px 10px;">&times;</button>');
-      removeBtn.on("click", function() { 
-        form.fields.splice(index, 1); 
-        renderFields(); 
-        renderPreview(); 
-      });
-
-      item.append(lblInput).append(typeSel).append(reqLabel).append(removeBtn);
+      item.append(lblInput, typeSel, reqLabel, removeBtn);
       list.append(item);
     });
   }
@@ -507,80 +443,48 @@ private function inline_css() {
   function renderPreview() {
     const form = $("#ef-editor-modal").data("editing");
     const preview = $("#ef-form-preview").empty();
-    
-    if(!form.fields || form.fields.length === 0) {
-        preview.html('<p style="color:#999; text-align:center; padding-top:20px;">No fields added yet.</p>');
-        return;
-    }
+    if(!form.fields || form.fields.length === 0) { preview.html('<p style="color:#999; text-align:center; padding-top:20px;">No fields added yet.</p>'); return; }
 
     form.fields.forEach((f) => {
       let html = '';
       const reqStar = f.required ? ' <span style="color:red">*</span>' : '';
       const lbl = '<label style="font-weight:600; font-size:14px; display:block;">' + escapeHtml(f.label) + reqStar + '</label>';
       
-      if (f.type === "textarea") {
-        html = lbl + '<textarea class="ef-input" rows="3"></textarea>';
-      } else if (f.type === "select") {
-        let opts = '';
-        if(f.options && Array.isArray(f.options)) {
-            f.options.forEach(o => opts += '<option>'+escapeHtml(o)+'</option>');
-        } else {
-            opts = '<option>Option 1</option><option>Option 2</option>';
-        }
-        html = lbl + '<select class="ef-input">' + opts + '</select>';
-      } else if (f.type === "checkbox") {
-        html = '<div style="margin:10px 0;"><label><input type="checkbox"> ' + escapeHtml(f.label) + reqStar + '</label></div>';
-      } else {
-        html = lbl + '<input class="ef-input" type="'+f.type+'">';
-      }
+      if (f.type === "textarea") html = lbl + '<textarea class="ef-input" rows="3"></textarea>';
+      else if (f.type === "select") {
+          let opts = ''; (f.options||['Option 1']).forEach(o => opts += '<option>'+escapeHtml(o)+'</option>');
+          html = lbl + '<select class="ef-input">' + opts + '</select>';
+      } else if (f.type === "checkbox") html = '<div style="margin:10px 0;"><label><input type="checkbox"> ' + escapeHtml(f.label) + reqStar + '</label></div>';
+      else html = lbl + '<input class="ef-input" type="'+f.type+'">';
       preview.append('<div style="margin-bottom:12px;">' + html + '</div>');
     });
   }
 
-  // --- ACTIONS ---
-
-  // Add Field Logic with Auto-Scroll Fix
+  // 3. Actions
   $("#ef-add-field").on("click", function() {
     const type = $("#ef-new-type").val();
     const form = $("#ef-editor-modal").data("editing");
     const opts = (type === 'select') ? ['Option 1', 'Option 2'] : [];
     form.fields.push({ id: uid('f'), label: 'New ' + type, type: type, required: false, options: opts });
-    
-    renderFields();
-    renderPreview();
-
-    // Scroll to the bottom and focus new input
+    renderFields(); renderPreview();
     const list = $("#ef-fields-list");
     list.animate({ scrollTop: list[0].scrollHeight }, 300);
-    setTimeout(function(){
-       list.find('.ef-field-label-input').last().focus().select();
-    }, 100);
+    setTimeout(function(){ list.find('.ef-field-label-input').last().focus().select(); }, 100);
   });
 
   $("#ef-save-custom").on("click", function() {
     const form = $("#ef-editor-modal").data("editing");
     form.name = $("#ef-form-name").val();
-    
     $.post(ExpliFormsData.ajax_url, {
-        action: 'expli_save_form',
-        nonce: ExpliFormsData.nonce,
-        form: JSON.stringify(form)
+        action: 'expli_save_form', nonce: ExpliFormsData.nonce, form: JSON.stringify(form)
     }, function(res) {
         if(res.success) {
-            // Update local cache
             ExpliFormsData.savedForms = ExpliFormsData.savedForms || {};
-            // If server returned form with date, use that, otherwise use local
             ExpliFormsData.savedForms[form.id] = res.data.form || form; 
-            
             alert('Form saved successfully!');
             $("#ef-editor-modal").hide();
-            // Switch back to saved view
-            $("#ef-templates-panel").hide(); 
-            $("#ef-saved-panel").show(); 
-            buildSavedGrid();
-        } else {
-            alert('Error saving form.');
-        }
+            $("#ef-templates-panel").hide(); $("#ef-saved-panel").show(); buildSavedGrid();
+        } else alert('Error saving form.');
     });
   });
 
@@ -588,69 +492,39 @@ private function inline_css() {
     const form = $("#ef-editor-modal").data("editing");
     form.name = $("#ef-form-name").val();
     $("#ef-editor-modal").hide();
-    
     const area = $("#ef-published-area").empty();
     area.append('<h3 style="margin-top:20px; border-bottom:2px solid #ddd; padding-bottom:10px;">' + escapeHtml(form.name) + '</h3>');
-    
-    const formEl = $('<form class="ef-live-form"></form>');
+    const formEl = $('<form class="ef-live-form" data-id="'+form.id+'"></form>');
     form.fields.forEach(f => {
-        let fieldHtml = '';
-        const reqStr = f.required ? 'required' : '';
+        let fieldHtml = '', reqStr = f.required ? 'required' : '';
         const lbl = '<label style="font-weight:bold; display:block;">'+escapeHtml(f.label) + (f.required?' *':'')+'</label>';
-        
-        if(f.type === 'textarea') {
-            fieldHtml = lbl + '<textarea name="'+f.id+'" class="ef-input" '+reqStr+'></textarea>';
-        } else if(f.type === 'select') {
-            let opts = '';
-            (f.options||['Option 1']).forEach(o => opts += '<option>'+escapeHtml(o)+'</option>');
-            fieldHtml = lbl + '<select name="'+f.id+'" class="ef-input">'+opts+'</select>';
-        } else if(f.type === 'checkbox') {
-             fieldHtml = '<label style="display:block; margin:10px 0;"><input type="checkbox" name="'+f.id+'"> '+escapeHtml(f.label)+'</label>';
-        } else {
-            fieldHtml = lbl + '<input type="'+f.type+'" name="'+f.id+'" class="ef-input" '+reqStr+'>';
-        }
+        if(f.type === 'textarea') fieldHtml = lbl + '<textarea name="'+f.id+'" class="ef-input" '+reqStr+'></textarea>';
+        else if(f.type === 'select') { let opts = ''; (f.options||['Option 1']).forEach(o => opts += '<option>'+escapeHtml(o)+'</option>'); fieldHtml = lbl + '<select name="'+f.id+'" class="ef-input">'+opts+'</select>'; }
+        else if(f.type === 'checkbox') fieldHtml = '<label style="display:block; margin:10px 0;"><input type="checkbox" name="'+f.id+'"> '+escapeHtml(f.label)+'</label>';
+        else fieldHtml = lbl + '<input type="'+f.type+'" name="'+f.id+'" class="ef-input" '+reqStr+'>';
         formEl.append(fieldHtml);
     });
-
-    const submitBtn = $('<button type="submit" class="ef-btn ef-btn-primary" style="margin-top:10px;">Submit Form</button>');
-    formEl.on('submit', function(e) {
-        e.preventDefault();
-        const rawData = $(this).serializeArray();
-        let jsonData = {};
-        rawData.forEach(item => jsonData[item.name] = item.value);
-
-        $.post(ExpliFormsData.ajax_url, {
-            action: 'expli_submit_form',
-            nonce: ExpliFormsData.nonce,
-            form_id: form.id,
-            data: JSON.stringify(jsonData)
-        }, function(res) {
-            if(res.success) { alert('Form submitted!'); formEl[0].reset(); }
-        });
-    });
-
-    formEl.append(submitBtn);
+    formEl.append('<button type="submit" class="ef-btn ef-btn-primary" style="margin-top:10px;">Submit Form</button>');
     area.append(formEl);
   });
 
-     // --- NEW MODAL CLOSING LOGIC ---
-    $("#ef-close-editor-top").on("click", function() {
-      $("#ef-editor-modal").hide();
-    });
-
-    // --- INITIALIZATION ---
-    buildTemplatesGrid();
-    buildSavedGrid();
+  $(document).on('submit', '.ef-live-form', function(e){
+      e.preventDefault(); const $f = $(this);
+      const d = {}; $f.serializeArray().forEach(x => d[x.name] = x.value);
+      $.post(ExpliFormsData.ajax_url, { action: 'expli_submit_form', nonce: ExpliFormsData.nonce, form_id: $f.data('id'), data: JSON.stringify(d) }, function(res){
+          if(res.success) { alert('Form submitted!'); $f[0].reset(); }
+      });
+  });
 
   $("#ef-open-templates").on("click", function () { $("#ef-templates-panel").show(); $("#ef-saved-panel").hide(); buildTemplatesGrid(); });
   $("#ef-open-saved").on("click", function () { $("#ef-templates-panel").hide(); $("#ef-saved-panel").show(); buildSavedGrid(); });
-  $("#ef-close-editor").on("click", function () { $("#ef-editor-modal").hide(); });
+  $("#ef-close-editor, #ef-close-editor-top").on("click", function () { $("#ef-editor-modal").hide(); });
 
   $(document).ready(function () {
-    // Default to Saved Forms view like WPForms
-    $("#ef-templates-panel").hide();
-    $("#ef-saved-panel").show();
-    buildSavedGrid();
+    // Only init dashboard if panel exists
+    if($("#ef-saved-panel").length) {
+        $("#ef-templates-panel").hide(); $("#ef-saved-panel").show(); buildSavedGrid();
+    }
   });
 })(jQuery);
 JS;

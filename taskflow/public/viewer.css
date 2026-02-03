@@ -1,0 +1,289 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body.bg {
+  margin: 0;
+  background: #000000;
+  color: #fff;
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+  max-width: 1100px;
+  width: 100%;
+  text-align: center;
+  padding: 60px 40px;
+}
+
+/* Logo */
+.logo-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+/* .logo-icon {
+  background: #23b5b5;
+  color: #000;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 900;
+} */
+
+.logo-text {
+  font-size: 32px;
+  font-weight: 600;
+  color: #23b5b5;
+  letter-spacing: 0.3px;
+}
+
+h1 {
+  font-size: 44px;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  color: #ffffff;
+}
+
+.subtitle {
+  color: #ffffff;
+  font-size: 18px;
+  margin-bottom: 56px;
+  font-weight: 400;
+}
+
+/* Cards Layout */
+.cards {
+  display: flex;
+  gap: 32px;
+  justify-content: center;
+  margin-bottom: 48px;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.card {
+  background: #1a1a1a;
+  padding: 48px 36px;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 420px;
+  border: 2px solid #1a1a1a;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.card:hover {
+  border-color: #2a2a2a;
+  transform: translateY(-2px);
+}
+
+.card.selected {
+  border-color: #23b5b5;
+  background: #1a1a1a;
+  box-shadow: 0 0 0 1px #23b5b5;
+}
+
+.card.selected:hover {
+  transform: translateY(-2px);
+}
+
+.icon-box {
+  background: transparent;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin: 0 auto 28px auto;
+  filter: grayscale(100%) opacity(0.4);
+  transition: filter 0.3s ease;
+}
+
+.card.selected .icon-box {
+  filter: grayscale(0%) opacity(1);
+}
+
+.icon-box.active {
+  filter: grayscale(0%) opacity(1);
+}
+
+.badge {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: #23b5b5;
+  color: #000;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card h3 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  color: #ffffff;
+  letter-spacing: -0.3px;
+}
+
+.card p {
+  color: #ffffff;
+  font-size: 15px;
+  line-height: 1.6;
+  margin-bottom: 28px;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+.card-features {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.card-features span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.check {
+  color: #ffffff;
+  font-style: normal;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* Button */
+.continue {
+  background: #23b5b5;
+  color: #000;
+  padding: 14px 36px;
+  border-radius: 8px;
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+  letter-spacing: 0.2px;
+}
+
+.continue:hover {
+  background: #17c1d9;
+  transform: translateY(-1px);
+}
+
+.continue:active {
+  transform: translateY(0);
+}
+
+.continue span {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.hint {
+  color: #ffffff;
+  font-size: 14px;
+  margin-top: 24px;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+/* Bottom Dots - Hidden by default to match screenshot */
+.pagination {
+  display: none;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 32px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2a2a2a;
+  transition: background 0.3s ease;
+}
+
+.dot.active {
+  background: #23b5b5;
+}
+
+.text-gray {
+  color: #6a7282;
+}
+
+/* Responsive Design */
+@media (max-width: 900px) {
+  .cards {
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .card {
+    max-width: 480px;
+  }
+
+  h1 {
+    font-size: 36px;
+  }
+
+  .subtitle {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 500px) {
+  .container {
+    padding: 40px 24px;
+  }
+
+  h1 {
+    font-size: 32px;
+  }
+
+  .card {
+    padding: 36px 28px;
+  }
+}

@@ -1,0 +1,240 @@
+{% schema %}
+{
+  "name": "CrossTalk – Translate",
+  "target": "body",
+  "settings": []
+}
+{% endschema %}
+
+<style>
+/* ===============================
+   GOOGLE TRANSLATE HIDES
+================================ */
+.goog-te-gadget,
+.goog-te-gadget-simple,
+.goog-logo-link,
+.goog-te-menu-frame,
+.goog-te-balloon-frame {
+  display: none !important;
+}
+
+iframe.goog-te-banner-frame {
+ z-index: -2147483647;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+
+body {
+  top: 0 !important;
+}
+
+/* Hide the top banner frame */
+#goog-gt-tt, 
+.goog-te-banner-frame, 
+.skiptranslate {
+    display: none !important;
+}
+
+
+
+/* Hide the 'Restore' tooltip that appears on hover */
+.goog-text-highlight {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.notranslate {
+  translate: no !important;
+}
+
+/* ===============================
+   CUSTOM UI
+================================ */
+#crosstalk-localization {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 2147483647;
+  font-family: system-ui, sans-serif;
+}
+
+#crosstalk-toggle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg,#667eea,#764ba2);
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0,0,0,.3);
+}
+
+#crosstalk-dropdown {
+  position: absolute;
+  bottom: 70px;
+  right: 0;
+  width: 280px;
+  max-height: 420px;
+  overflow-y: auto;
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 20px 40px rgba(0,0,0,.25);
+  display: none;
+}
+
+#crosstalk-dropdown.open {
+  display: block;
+}
+
+.language-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.language-item:hover {
+  background: #f1f5f9;
+}
+
+</style>
+
+<div id="crosstalk-localization" class="notranslate">
+  <button id="crosstalk-toggle">🌐</button>
+  <div id="crosstalk-dropdown"></div>
+</div>
+
+<div id="google_translate_element" class="notranslate" style="display:none"></div>
+
+<script>
+(function () {
+
+  /* ===============================
+     FULL GOOGLE LANGUAGE LIST
+  ================================ */
+  const LANGUAGES = [
+    { code: "en", name: "English" },
+    { code: "af", name: "Afrikaans" },
+    { code: "sq", name: "Albanian" },
+    { code: "am", name: "Amharic" },
+    { code: "ar", name: "Arabic" },
+    { code: "hy", name: "Armenian" },
+    { code: "az", name: "Azerbaijani" },
+    { code: "bn", name: "Bengali" },
+    { code: "bg", name: "Bulgarian" },
+    { code: "ca", name: "Catalan" },
+    { code: "zh-CN", name: "Chinese (Simplified)" },
+    { code: "zh-TW", name: "Chinese (Traditional)" },
+    { code: "hr", name: "Croatian" },
+    { code: "cs", name: "Czech" },
+    { code: "da", name: "Danish" },
+    { code: "nl", name: "Dutch" },
+    { code: "et", name: "Estonian" },
+    { code: "fi", name: "Finnish" },
+    { code: "fr", name: "French" },
+    { code: "de", name: "German" },
+    { code: "el", name: "Greek" },
+    { code: "gu", name: "Gujarati" },
+    { code: "he", name: "Hebrew" },
+    { code: "hi", name: "Hindi" },
+    { code: "hu", name: "Hungarian" },
+    { code: "id", name: "Indonesian" },
+    { code: "it", name: "Italian" },
+    { code: "ja", name: "Japanese" },
+    { code: "kn", name: "Kannada" },
+    { code: "ko", name: "Korean" },
+    { code: "lv", name: "Latvian" },
+    { code: "lt", name: "Lithuanian" },
+    { code: "ms", name: "Malay" },
+    { code: "ml", name: "Malayalam" },
+    { code: "mr", name: "Marathi" },
+    { code: "no", name: "Norwegian" },
+    { code: "fa", name: "Persian" },
+    { code: "pl", name: "Polish" },
+    { code: "pt", name: "Portuguese" },
+    { code: "pa", name: "Punjabi" },
+    { code: "ro", name: "Romanian" },
+    { code: "ru", name: "Russian" },
+    { code: "es", name: "Spanish" },
+    { code: "sv", name: "Swedish" },
+    { code: "ta", name: "Tamil" },
+    { code: "te", name: "Telugu" },
+    { code: "th", name: "Thai" },
+    { code: "tr", name: "Turkish" },
+    { code: "uk", name: "Ukrainian" },
+    { code: "ur", name: "Urdu" },
+    { code: "vi", name: "Vietnamese" }
+  ];
+
+  let gtLoaded = false;
+  const dropdown = document.getElementById("crosstalk-dropdown");
+  const toggle = document.getElementById("crosstalk-toggle");
+
+  /* Render languages */
+  LANGUAGES.forEach(lang => {
+    const div = document.createElement("div");
+    div.className = "language-item";
+    div.textContent = lang.name;
+    div.dataset.lang = lang.code;
+    dropdown.appendChild(div);
+  });
+
+  toggle.addEventListener("click", () => {
+    dropdown.classList.toggle("open");
+    loadGoogleTranslate();
+  });
+
+  function loadGoogleTranslate() {
+    if (gtLoaded) return;
+    gtLoaded = true;
+    const s = document.createElement("script");
+    s.src = "//translate.google.com/translate_a/element.js?cb=googleTranslateInit";
+    document.body.appendChild(s);
+  }
+
+  window.googleTranslateInit = function () {
+    new google.translate.TranslateElement(
+        { pageLanguage: "en", autoDisplay: false },
+        "google_translate_element"
+    );
+
+    // Forcefully remove the banner if it appears
+    const removeBanner = () => {
+        const banner = document.querySelector(".goog-te-banner-frame");
+        if (banner) {
+            banner.src = "about:blank"; // Kill the iframe content
+            banner.style.display = "none";
+        }
+        document.body.style.top = "0px";
+    };
+
+    // Run it once and then a few seconds later to catch late loads
+    removeBanner();
+    setTimeout(removeBanner, 1000);
+    setTimeout(removeBanner, 3000);
+  };
+
+  dropdown.addEventListener("click", e => {
+    const lang = e.target.dataset.lang;
+    if (!lang) return;
+
+    dropdown.classList.remove("open");
+
+    if (lang === "en") {
+      location.reload(); // Reset to original
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const combo = document.querySelector(".goog-te-combo");
+      if (combo) {
+        combo.value = lang;
+        combo.dispatchEvent(new Event("change"));
+        clearInterval(interval);
+      }
+    }, 300);
+  });
+
+})();
+</script>

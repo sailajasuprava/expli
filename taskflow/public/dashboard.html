@@ -1,0 +1,467 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>TaskFlow – Dashboard</title>
+    <link rel="stylesheet" href="dashboard.css" />
+  </head>
+  <body class="bg">
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="logo">
+          <div class="logo-icon">✔</div>
+          <span class="logo-text">TaskFlow</span>
+        </div>
+
+        <button class="add-task-btn">
+          <span class="plus">+</span> Add Task
+        </button>
+
+        <nav class="nav-menu">
+          <div class="nav-item active">
+            <svg
+              class="nav-icon"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <span>Today</span>
+            <span class="badge">4</span>
+          </div>
+          <div class="nav-item">
+            <svg
+              class="nav-icon"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span>Upcoming</span>
+          </div>
+          <div class="nav-item">
+            <svg
+              class="nav-icon"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <span>Completed</span>
+          </div>
+        </nav>
+
+        <div class="projects-section">
+          <h4 class="section-title">PROJECTS</h4>
+          <div class="project-item">
+            <svg
+              class="project-icon"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+              ></path>
+            </svg>
+            <span>Work</span>
+            <span class="count">3</span>
+          </div>
+          <div class="project-item">
+            <svg
+              class="project-icon"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+              ></path>
+            </svg>
+            <span>Personal</span>
+            <span class="count">2</span>
+          </div>
+        </div>
+      </aside>
+
+      <main class="content">
+        <div class="header">
+          <div class="header-left">
+            <h1>Today</h1>
+            <p class="meta">
+              <svg
+                class="target-icon"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="12" r="6"></circle>
+                <circle cx="12" cy="12" r="2"></circle>
+              </svg>
+              4 tasks today · 2 completed
+            </p>
+          </div>
+          <button class="display-btn" id="displayBtn">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+            Display
+          </button>
+        </div>
+
+        <div class="tasks-list" id="taskList">
+          <div class="task">
+            <div class="task-checkbox"></div>
+            <div class="task-content">
+              <div class="task-title">Review Q1 product roadmap</div>
+              <div class="task-meta">
+                <span class="task-time">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  Today
+                </span>
+                <span class="task-project">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+                    ></path>
+                  </svg>
+                  Work
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="task">
+            <div class="task-checkbox"></div>
+            <div class="task-content">
+              <div class="task-title">
+                Prepare presentation for client meeting
+              </div>
+              <div class="task-meta">
+                <span class="task-time">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  2:00 PM
+                </span>
+                <span class="task-priority high">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                    ></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                  </svg>
+                  High
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="task completed">
+            <div class="task-checkbox checked">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+              >
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+            <div class="task-content">
+              <div class="task-title">Update team documentation</div>
+              <div class="task-meta">
+                <span class="task-status">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                  Completed
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="task">
+            <div class="task-checkbox"></div>
+            <div class="task-content">
+              <div class="task-title">Code review for new features</div>
+              <div class="task-meta">
+                <span class="task-time">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  Today
+                </span>
+                <span class="task-comments">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                    ></path>
+                  </svg>
+                  3
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div id="addTaskContainer">
+            <div class="add-task" id="showFormBtn">
+              <span class="plus-icon">+</span>
+              <span>Add task</span>
+            </div>
+
+            <div class="quick-add-card hidden" id="quickAddForm">
+              <div class="quick-add-header">
+                <span>Quick Add Task</span>
+                <button class="close-form" id="closeFormBtn">✕</button>
+              </div>
+
+              <div class="quick-add-inputs">
+                <input
+                  type="text"
+                  id="taskTitleInput"
+                  placeholder="What needs to be done?"
+                  autofocus
+                />
+                <input
+                  type="text"
+                  id="taskDescInput"
+                  placeholder="Description (optional)"
+                />
+              </div>
+
+              <div class="selected-tags" id="selectedTags"></div>
+
+              <div class="quick-add-actions">
+                <div class="action-buttons">
+                  <button id="calBtn">
+                    <span class="icon">📅</span> Due date
+                  </button>
+                  <button id="prioBtn">
+                    <span class="icon">🚩</span> Priority
+                  </button>
+                  <button><span class="icon">📥</span> Inbox</button>
+                </div>
+                <button class="voice-btn">🎤</button>
+
+                <div class="popup calendar-popup hidden" id="calendarPopup">
+                  <div class="cal-header">
+                    <span id="calMonthYear"></span>
+                    <div class="cal-nav">
+                      <button id="prevMonth">＜</button>
+                      <button id="nextMonth">＞</button>
+                    </div>
+                  </div>
+                  <div class="cal-weekdays">
+                    <span>M</span><span>T</span><span>W</span><span>T</span
+                    ><span>F</span><span>S</span><span>S</span>
+                  </div>
+                  <div class="cal-grid" id="calendarGrid"></div>
+                </div>
+
+                <div class="popup priority-popup hidden" id="priorityPopup">
+                  <div class="prio-item" data-prio="1">
+                    <span class="p-icon" style="color: #ef4444">🚩</span>
+                    Priority 1
+                  </div>
+                  <div class="prio-item" data-prio="2">
+                    <span class="p-icon" style="color: #f97316">🚩</span>
+                    Priority 2
+                  </div>
+                  <div class="prio-item" data-prio="3">
+                    <span class="p-icon" style="color: #3b82f6">🚩</span>
+                    Priority 3
+                  </div>
+                  <div class="prio-item" data-prio="4">
+                    <span class="p-icon" style="color: #a3a3a3">🚩</span>
+                    Priority 4
+                  </div>
+                </div>
+              </div>
+
+              <div class="quick-add-footer">
+                <button class="cancel-btn" id="cancelFormBtn">Cancel</button>
+                <button class="submit-btn" id="submitTaskBtn">Add task</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <aside class="display-panel" id="displayPanel">
+        <div class="panel-section">
+          <label>Layout</label>
+          <div class="layout-options">
+            <button class="layout-opt active" id="listViewBtn">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+              </svg>
+              List
+            </button>
+            <button class="layout-opt" id="boardViewBtn">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="3" y="3" width="7" height="9"></rect>
+                <rect x="14" y="3" width="7" height="5"></rect>
+                <rect x="14" y="11" width="7" height="9"></rect>
+                <rect x="3" y="15" width="7" height="5"></rect>
+              </svg>
+              Board
+            </button>
+            <button class="layout-opt">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              Calendar
+            </button>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <label>Sort</label>
+          <select class="panel-select">
+            <option>Smart</option>
+            <option>Due Date</option>
+            <option>Priority</option>
+          </select>
+        </div>
+
+        <div class="panel-section">
+          <label>Filter</label>
+          <select class="panel-select">
+            <option>All tasks</option>
+            <option>Incomplete</option>
+            <option>Completed</option>
+          </select>
+        </div>
+      </aside>
+    </div>
+
+    <script src="dashboard.js"></script>
+  </body>
+</html>

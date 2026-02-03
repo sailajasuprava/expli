@@ -1,0 +1,7 @@
+name = "meetflow-theme"
+type = "theme"
+uid = "08b10499-58c8-b47e-b74a-98e53410cadcb8b8da11"
+
+[[blocks]]
+name = "Meetflow App Embed"
+type = "app-embed"

@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+:root {
+  --step-active-color: #2c6ecb; /* blue you want */
+}

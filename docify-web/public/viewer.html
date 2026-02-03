@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Docify PDF</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: sans-serif;
+      }
+      header {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 10px;
+        background: #1a1a1a;
+      }
+      button {
+        color: white;
+        background: none;
+        border: none;
+        cursor: pointer;
+      }
+      iframe {
+        width: 100%;
+        height: calc(100vh - 50px);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <button onclick="download()">Download</button>
+      <button onclick="printPDF()">Print</button>
+      <button onclick="share()">Share</button>
+    </header>
+
+    <iframe
+      id="preview"
+      style="width: 100%; height: calc(100vh - 50px); border: none"
+    >
+    </iframe>
+
+    <script src="viewer.js"></script>
+  </body>
+</html>

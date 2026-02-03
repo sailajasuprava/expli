@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>TaskFlow – Welcome</title>
+    <link rel="stylesheet" href="viewer.css" />
+  </head>
+  <body class="bg">
+    <div class="container">
+      <div class="logo-wrapper">
+        <!-- <div class="logo-icon">✔</div> -->
+        <div class="logo-text">TaskFlow</div>
+      </div>
+
+      <h1>Welcome! Let's get started</h1>
+      <p class="subtitle">How do you plan to use TaskFlow?</p>
+
+      <div class="cards">
+        <div class="card">
+          <div class="icon-box">👤</div>
+          <h3>Personal</h3>
+          <p>Organize your personal tasks, goals, and daily activities</p>
+          <div class="card-features">
+            <span><i class="check">✓</i> Private</span>
+            <span><i class="check">✓</i> Flexible</span>
+          </div>
+        </div>
+
+        <div class="card selected">
+          <div class="badge">✔</div>
+          <div class="icon-box active">💼</div>
+          <h3>Work & Team</h3>
+          <p class="text-gray">
+            Collaborate with your team and manage projects together
+          </p>
+          <div class="card-features">
+            <span><i class="check">✓</i> Collaborative</span>
+            <span><i class="check">✓</i> Powerful</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="continue" id="continueBtn">Continue <span>→</span></button>
+
+      <!-- <p class="hint">You can change this later in settings</p> -->
+
+      <div class="pagination">
+        <span class="dot"></span>
+        <span class="dot active"></span>
+        <span class="dot"></span>
+      </div>
+    </div>
+
+    <script src="viewer.js"></script>
+  </body>
+</html>
